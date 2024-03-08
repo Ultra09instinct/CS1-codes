@@ -1,0 +1,61 @@
+clc;
+clear all;
+close all;
+% Simulation settings
+tStart = 0;
+tStop = 0.002;
+Fs = 48 * 10^3;
+delta = 0.15;
+SNR = 20;
+
+% Calculate
+Ts = 1 / Fs;
+t = tStart : Ts : tStop;
+
+% Perform adaptive delta modulation and demodulation
+xt_sig = awgn(sin(2*pi* 1000 * t) + sin(2*pi* 1500 * t) + sin(2*pi* 2000 * t), 20);
+x_old = 0;
+delta_factor = 0;
+y_old = 0;
+yt_sig = zeros(1, length(xt_sig));
+for i = 1 : length(xt_sig)
+    xd = (xt_sig(i) >= 0.5);
+	y_old = y_old + delta * sign(xd - 0.5) * (1.2 ^ delta_factor);
+	delta_factor = delta_factor + sign((xd == x_old) - 0.5);
+	yt_sig(i) = y_old;
+	x_old = xd;
+end
+subplot(2,2,1);
+plot(t, xt_sig, 'b');
+ylim([-4 4]);
+title('Message signal');
+subplot(2, 2, 2);
+stairs(t, yt_sig);
+ylim([-0.5 1.5]);
+title('Adaptive Delta modulation bits (Tx)');
+yr_sig = awgn(yt_sig, SNR);
+x_old = 0;
+delta_factor = 0;
+y_old = 0;
+xr_sig = zeros(1, length(yr_sig));
+for i = 1 : length(yr_sig)
+    xd = (yr_sig(i) >= 0.5);
+	y_old = y_old + delta * sign(xd - 0.5) * (1.2 ^ delta_factor);
+	delta_factor = delta_factor + sign((xd == x_old) - 0.5);
+	xr_sig(i) = y_old;
+	x_old = xd;
+end
+
+
+subplot(2, 2, 3);
+stairs(t, yr_sig);
+title('Adaptive Delta modulation bits (Rx)');
+subplot(2, 2, 4);
+plot(t, xt_sig, 'b');
+hold on;
+stairs(t, xr_sig, 'r');
+ylim([-4 4]);
+title('Adaptive Delta demodulated signal comparision (delta = 0.3)');
+
+
+
